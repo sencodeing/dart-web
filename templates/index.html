@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>DART 엑셀 생성기</title>
+</head>
+<body>
+
+<h2>DART 엑셀 생성기</h2>
+
+<form method="POST">
+
+    🏢 기업명:<br>
+    <input name="corp" value="{{ corp }}"><br><br>
+
+    📂 섹션명:<br>
+    <input name="section" value="{{ section }}"><br><br>
+
+    📅 보고서 날짜:<br>
+    <input name="date" value="{{ date }}">
+    <small>예: 2026.04.17</small><br><br>
+
+    📑 공시 종류:<br>
+    <select name="pblntf_ty">
+        <option value="A" {% if pblntf_ty == 'A' %}selected{% endif %}>A</option>
+        <option value="B" {% if pblntf_ty == 'B' %}selected{% endif %}>B</option>
+    </select><br><br>
+
+    <button type="submit">🔍 미리보기</button>
+
+</form>
+
+<hr>
+
+{% if error %}
+<p style="color:red;">{{ error }}</p>
+{% endif %}
+
+{% if table %}
+<h3>📊 결과</h3>
+{{ table|safe }}
+
+<form method="POST" action="/download">
+    <input type="hidden" name="corp" value="{{ corp }}">
+    <input type="hidden" name="section" value="{{ section }}">
+    <input type="hidden" name="pblntf_ty" value="{{ pblntf_ty }}">
+    <input type="hidden" name="date" value="{{ date }}">
+    <button type="submit">📥 엑셀 다운로드</button>
+</form>
+{% endif %}
+
+</body>
+</html>
