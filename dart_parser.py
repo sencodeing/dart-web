@@ -4,10 +4,30 @@ from lxml import etree
 import pandas as pd
 import os
 
+# ✅ API KEY
 API_KEY = os.getenv("DART_API_KEY")
+
+if not API_KEY:
+    raise Exception("❌ DART_API_KEY 없음")
+
 dart.set_api_key(api_key=API_KEY)
 
 
+# ✅ 날짜 정리
+def normalize_date(date_str):
+    if not date_str:
+        return None
+    
+    return (
+        date_str
+        .replace(".", "")
+        .replace("-", "")
+        .replace("/", "")
+        .strip()
+    )
+
+
+# ✅ rowspan / colspan 처리
 def parse_table_with_span(table):
     rows = table.xpath(".//tr")
     grid = []
@@ -28,6 +48,7 @@ def parse_table_with_span(table):
                 c_idx += 1
 
             text = cell.xpath("string(.)").strip()
+
             rowspan = int(cell.get("rowspan", 1))
             colspan = int(cell.get("colspan", 1))
 
@@ -47,6 +68,7 @@ def parse_table_with_span(table):
     return grid
 
 
+# ✅ 테이블 추출
 def extract_table(root, keyword):
     keyword = keyword.strip()
 
@@ -76,14 +98,14 @@ def extract_table(root, keyword):
     raise Exception("❌ 적절한 표를 찾지 못함")
 
 
+# ✅ 메인 함수 (🔥 메모리 최적화 완료)
 def get_table(corp_name, section, pblntf_ty, target_date=None):
-    corp_list = dart.get_corp_list()
-    corps = corp_list.find_by_corp_name(corp_name, exactly=False)
 
-    if not corps:
+    # ❗ 기존 get_corp_list 제거 (메모리 폭탄)
+    corp = dart.get_corp(corp_name)
+
+    if corp is None:
         raise Exception("❌ 기업을 찾을 수 없음")
-
-    corp = corps[0]
 
     reports = corp.search_filings(
         pblntf_ty=pblntf_ty,
@@ -94,9 +116,9 @@ def get_table(corp_name, section, pblntf_ty, target_date=None):
     if not reports:
         raise Exception("❌ 공시 없음")
 
-    # 🔥 날짜 필터
+    # ✅ 날짜 필터
     if target_date:
-        target_date = target_date.replace("-", "").replace(".", "")
+        target_date = normalize_date(target_date)
 
         matched = [r for r in reports if target_date in r.rcept_dt]
 
@@ -107,6 +129,7 @@ def get_table(corp_name, section, pblntf_ty, target_date=None):
     else:
         target_report = reports[0]
 
+    # ✅ XML 다운로드
     res = requests.get(
         "https://opendart.fss.or.kr/api/document.xml",
         params={
@@ -120,6 +143,7 @@ def get_table(corp_name, section, pblntf_ty, target_date=None):
     except zipfile.BadZipFile:
         raise Exception("❌ ZIP 파일 아님")
 
+    # ✅ XML 병합
     full_text = ""
 
     for f in zf.namelist():
