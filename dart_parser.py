@@ -13,6 +13,10 @@ if not API_KEY:
 dart.set_api_key(api_key=API_KEY)
 
 
+# ✅ 핵심: corp_list 전역 1회 로딩 (🔥 매우 중요)
+corp_list = dart.get_corp_list()
+
+
 # ✅ 날짜 정리
 def normalize_date(date_str):
     if not date_str:
@@ -98,14 +102,16 @@ def extract_table(root, keyword):
     raise Exception("❌ 적절한 표를 찾지 못함")
 
 
-# ✅ 메인 함수 (🔥 메모리 최적화 완료)
+# ✅ 메인 함수
 def get_table(corp_name, section, pblntf_ty, target_date=None):
 
-    # ❗ 기존 get_corp_list 제거 (메모리 폭탄)
-    corp = dart.get_corp(corp_name)
+    # ✅ corp_list 재사용 (메모리 안전)
+    corps = corp_list.find_by_corp_name(corp_name, exactly=False)
 
-    if corp is None:
+    if not corps:
         raise Exception("❌ 기업을 찾을 수 없음")
+
+    corp = corps[0]
 
     reports = corp.search_filings(
         pblntf_ty=pblntf_ty,
